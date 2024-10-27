@@ -6,7 +6,6 @@ import ban from "./assets/emb.png";
 import banm from "./assets/banm.jpeg";
 
 const PreorderForm = () => {
-  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -27,7 +26,6 @@ const PreorderForm = () => {
     error: "",
   });
 
-  // Specified countries map
   const countryMap = {
     GB: "United Kingdom",
     NG: "Nigeria",
@@ -232,44 +230,39 @@ const PreorderForm = () => {
     ZW: "+263",
   };
 
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
   useEffect(() => {
+    const startDate = new Date("2024-10-27T00:00:00");
+    const endDate = new Date(startDate.getTime() + 21 * 24 * 60 * 60 * 1000);
+
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      const now = new Date();
+      const difference = endDate - now;
+
+      if (difference <= 0) {
+        clearInterval(timer);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ days, hours, minutes, seconds });
     }, 1000);
 
     return () => clearInterval(timer);
   }, []);
-
-  function calculateTimeLeft() {
-    const targetDate = new Date("2023-10-27T00:00:00");
-    const now = new Date();
-    const difference = targetDate - now;
-
-    let timeLeft = {};
-
-    if (difference > 0) {
-      timeLeft = {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60),
-      };
-    }
-
-    return timeLeft;
-  }
-
-  const renderCountdown = () => {
-    return (
-      <div className="countdown">
-        <div className="time">
-          {timeLeft.days || "0"}d {timeLeft.hours || "0"}h {timeLeft.minutes || "0"}m {timeLeft.seconds || "0"}s
-        </div>
-      </div>
-    );
-  };
 
   useEffect(() => {
     setMetadata((prev) => ({ ...prev, countries: countriesData.countries }));
@@ -309,7 +302,6 @@ const PreorderForm = () => {
   }, [metadata.deliveryFees]);
 
   const getEffectiveCountry = (countryCode) => {
-    // If the country is in our specified list, use it; otherwise, use US
     return countryMap[countryCode] ? countryMap[countryCode] : "United States";
   };
 
@@ -364,7 +356,6 @@ const PreorderForm = () => {
     setMetadata((prev) => ({ ...prev, loading: true, error: "" }));
 
     try {
-      // Get the selected country's full name from the countries data
       const selectedCountry = metadata.countries.find(
         (c) => c.code2 === formData.country
       );
@@ -373,7 +364,7 @@ const PreorderForm = () => {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-        country: selectedCountry?.name || "", // Use the actual country name
+        country: selectedCountry?.name || "",
         state: formData.state,
         address: formData.address,
         delivery_type: formData.delivery_type,
@@ -394,7 +385,7 @@ const PreorderForm = () => {
       const data = await response.json();
 
       if (data.status === "success") {
-        toast.success("Form submitted successfully!")
+        toast.success("Form submitted successfully!");
         setTimeout(() => {
           window.open(data.data, "_blank");
         }, 3000);
@@ -451,10 +442,34 @@ const PreorderForm = () => {
 
   return (
     <>
-      
       <div className="absolute h-screen w-full bg-black opacity-50"></div>
-      <div className="absolute flex items-center justify-center w-full top-32 md:top-24 text-white text-4xl md:text-5xl font-bold">
-      {renderCountdown()}
+      <div className="absolute flex items-center justify-center w-full top-16 text-white text-3xl md:text-6xl font-bold">
+        <div className="p-6">
+          <div className="grid grid-cols-4 gap-2">
+            <div className="">
+              <div className="">{timeLeft.days} :</div>
+              <div className="text-[18px] text-white">Days</div>
+            </div>
+            <div className="">
+              <div className="">{timeLeft.hours} :</div>
+              <div className="text-[18px] text-white">Hours</div>
+            </div>
+            <div className="">
+              <div className="">{timeLeft.minutes} :</div>
+              <div className="text-[18px] sm:hidden text-white">Mins</div>
+              <div className="text-[18px] hidden sm:block text-white">
+                Minutes
+              </div>
+            </div>
+            <div className="">
+              <div className="">{timeLeft.seconds}</div>
+              <div className="text-[18px] sm:hidden text-white">Secs</div>
+              <div className="text-[18px] hidden sm:block text-white">
+                Seconds
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <img src={banm} className="md:hidden w-full" alt="" />
       <img
@@ -466,9 +481,13 @@ const PreorderForm = () => {
         <div className="bg-white w-full grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 lg:p-12">
           <div className="flex flex-col">
             <h3 className="text-[18px] font-[600] mb-4">Details</h3>
-            <div className="flex mb-6 relative">
-              <img src={ban} alt="Embrace Book" className="w-48 h-auto" />
-              <div className="flex flex-col absolute left-[13rem] bottom-0">
+            <div className="flex flex-col sm:flex-row text-left gap-6 mb-6">
+              <img
+                src={ban}
+                alt="Embrace Book"
+                className="w-full sm:w-48 h-auto"
+              />
+              <div className="flex flex-col left-[13rem] sm:mt-20">
                 <h1 className="text-2xl font-bold">Embrace</h1>
                 <p className="text-gray-600 ">
                   by{" "}
@@ -648,7 +667,6 @@ const PreorderForm = () => {
                   </p>
                 </div>
               )}
-
 
               {renderDeliveryInfo()}
 

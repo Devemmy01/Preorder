@@ -1,21 +1,17 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Preorder from "./Preorder";
-import PaymentPage from "./PaymentPage";
-import { ToastContainer, toast } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import { SuccessPayment, CancelledPayment } from './components/PaymentResponse';
 
 const App = () => {
   return (
-    <>
-    <ToastContainer />
     <Router>
       <Routes>
         <Route path="/" element={<Preorder />} />
-        <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/success" element={<SuccessPayment />} />
+        <Route path="/cancel" element={<CancelledPayment />} />
       </Routes>
     </Router>
-    </>
   );
 };
 
