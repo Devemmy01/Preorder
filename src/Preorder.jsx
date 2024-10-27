@@ -451,16 +451,17 @@ const PreorderForm = () => {
 
   return (
     <>
-      <img
-        src={banm}
-        className="hidden md:flex h-[250px object-cover w-full -z-20"
-        alt=""
-      />
+      
       <div className="absolute h-screen w-full bg-black opacity-50"></div>
-      <div className="absolute flex items-center justify-center w-full top-32 text-white text-3xl font-bold">
+      <div className="absolute flex items-center justify-center w-full top-32 md:top-24 text-white text-4xl md:text-5xl font-bold">
       {renderCountdown()}
       </div>
       <img src={banm} className="md:hidden w-full" alt="" />
+      <img
+        src={banm}
+        className="hidden md:block h-[250px] object-cover w-full -z-20"
+        alt=""
+      />
       <div className="flex justify-center py-10 absolute z-[9999] bg-white ">
         <div className="bg-white w-full grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 lg:p-12">
           <div className="flex flex-col">
