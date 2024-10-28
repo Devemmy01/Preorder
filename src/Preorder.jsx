@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import countriesData from "./countries.json";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { CheckCircle } from "lucide-react";
 import ban from "./assets/emb.png";
 import banm from "./assets/banm.jpeg";
 
@@ -15,6 +16,8 @@ const PreorderForm = () => {
     address: "",
     delivery_type: "",
   });
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [metadata, setMetadata] = useState({
     countries: [],
@@ -32,6 +35,14 @@ const PreorderForm = () => {
     GH: "Ghana",
     DE: "Germany",
     US: "United States",
+  };
+
+  const preorderPrice = {
+    "United Kingdom": "GBP 12",
+    Nigeria: "NGN 7000",
+    Ghana: "GHS 70",
+    Germany: "EUR 13",
+    default: "USD 17",
   };
 
   const countryPhoneCodes = {
@@ -305,8 +316,14 @@ const PreorderForm = () => {
     return countryMap[countryCode] ? countryMap[countryCode] : "United States";
   };
 
+  // Function to retrieve the preorder price
+  const getPreorderPrice = (countryName) =>
+    preorderPrice[countryName] || preorderPrice.default;
+
+  // Fetch price and set the correct country name
   const fetchPrice = async (countryCode) => {
     try {
+      const countryName = countryMap[countryCode] || "United States"; // Default to "United States" if country not found
       const effectiveCountry = getEffectiveCountry(countryCode);
       const response = await fetch(
         `https://lovepassionsandwholeness.com/api/price/${effectiveCountry}`
@@ -316,7 +333,10 @@ const PreorderForm = () => {
       if (data.status === "success") {
         setMetadata((prev) => ({
           ...prev,
-          priceData: data.data,
+          priceData: {
+            ...data.data,
+            country: countryName, // Set the full country name here
+          },
         }));
       }
     } catch (error) {
@@ -385,10 +405,18 @@ const PreorderForm = () => {
       const data = await response.json();
 
       if (data.status === "success") {
-        toast.success("Form submitted successfully!");
-        setTimeout(() => {
-          window.open(data.data, "_blank");
-        }, 3000);
+        // Check if selected country is in the explicitly included countries
+        if (
+          selectedCountry &&
+          Object.values(countryMap).includes(selectedCountry.name)
+        ) {
+          toast.success("Form submitted successfully!");
+          setTimeout(() => {
+            window.open(data.data, "_blank");
+          }, 3000);
+        } else {
+          setShowSuccessModal(true);
+        }
       } else {
         setMetadata((prev) => ({ ...prev, error: data.message }));
       }
@@ -660,11 +688,23 @@ const PreorderForm = () => {
               </div>
 
               {metadata.priceData.price && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-lg font-semibold">
-                    Book Price: {metadata.priceData.currency}{" "}
-                    {metadata.priceData.price}
-                  </p>
+                <div className="p-4 bg-gray-50 rounded-lg"> 
+                  <div className="text-lg pt-2 flex flex-col gap-4 font-semibold">
+                    <div class="flex flex-col">
+                      <p className="text-2xl font-semibold">
+                       Price After Pre Order
+                      </p>
+                      <span className="line-through mr-2">
+                        {getPreorderPrice(metadata.priceData.country)}
+                      </span>
+                    </div>
+                    <div class="flex flex-col">
+                      <p className="text-2xl font-semibold">
+                        Pre Order Book Price
+                      </p>
+                    {metadata.priceData.currency} {metadata.priceData.price}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -689,6 +729,35 @@ const PreorderForm = () => {
               </button>
             </form>
 
+            {showSuccessModal && (
+              <div className="modal-overlay px-2">
+                <div className="modal animated-popup">
+                  <div className="modal-header relative">
+                    <h2 className="absolute text-right pr-5 sm:text-center z-50 top-3 md:top-4 font-semibold w-full">
+                      Order Received
+                    </h2>
+                    <div className="rounded-full bg-green-100 relative p-3 mb-4">
+                      <CheckCircle className="w-10 h-10 md:h-12 md:w-12 text-green-500" />
+                    </div>
+                  </div>
+                  <div className="modal-body">
+                    <p>
+                      Your order has been successfully saved. We will
+                      communicate payment and delivery details to you soon.
+                    </p>
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      onClick={() => setShowSuccessModal(false)}
+                      className="btn-close"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <ToastContainer
               position="top-center"
               autoClose={5000}
@@ -704,6 +773,66 @@ const PreorderForm = () => {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+        .modal {
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          max-width: 500px;
+          width: 100%;
+          text-align: center;
+        }
+        .modal-header h2 {
+          margin: 0;
+          font-size: 1.5em;
+        }
+        .modal-body {
+          margin: 20px 0;
+        }
+        .modal-footer {
+          text-align: center;
+        }
+        .btn-close {
+          background-color: #000;
+          color: white;
+          padding: 10px 20px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        .btn-close:hover {
+          background-color: grey;
+        }
+
+        /* Animation styles */
+        @keyframes popupAnimation {
+          0% {
+            transform: scale(0.5);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .animated-popup {
+          animation: popupAnimation 0.3s ease-out;
+        }
+      `}</style>
     </>
   );
 };
