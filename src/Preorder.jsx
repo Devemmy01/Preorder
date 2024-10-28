@@ -4,7 +4,6 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CheckCircle } from "lucide-react";
 import ban from "./assets/ban.jpg";
-import banm from "./assets/banm.jpeg";
 
 const PreorderForm = () => {
   const [formData, setFormData] = useState({
@@ -249,7 +248,7 @@ const PreorderForm = () => {
   });
 
   useEffect(() => {
-    const startDate = new Date("2024-10-27T00:00:00");
+    const startDate = new Date("2024-10-28T00:00:00");
     const endDate = new Date(startDate.getTime() + 21 * 24 * 60 * 60 * 1000);
 
     const timer = setInterval(() => {
