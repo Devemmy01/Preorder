@@ -3,7 +3,7 @@ import countriesData from "./countries.json";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CheckCircle } from "lucide-react";
-import ban from "./assets/emb.png";
+import ban from "./assets/ban.jpg";
 import banm from "./assets/banm.jpeg";
 
 const PreorderForm = () => {
@@ -471,7 +471,7 @@ const PreorderForm = () => {
   return (
     <>
       <div className="absolute h-screen w-full bg-black opacity-50"></div>
-      <div className="absolute flex items-center justify-center w-full top-16 text-white text-3xl md:text-6xl font-bold">
+      <div className="absolute flex items-center justify-center w-full top-[8rem] md:top-16 text-white text-3xl md:text-6xl font-bold">
         <div className="p-6">
           <div className="grid grid-cols-4 gap-2">
             <div className="">
@@ -499,9 +499,9 @@ const PreorderForm = () => {
           </div>
         </div>
       </div>
-      <img src={banm} className="md:hidden w-full" alt="" />
+      <img src={ban} className="md:hidden w-full object-cover h-[360px]" alt="" />
       <img
-        src={banm}
+        src={ban}
         className="hidden md:block h-[250px] object-cover w-full -z-20"
         alt=""
       />
@@ -513,7 +513,7 @@ const PreorderForm = () => {
               <img
                 src={ban}
                 alt="Embrace Book"
-                className="w-full sm:w-48 h-auto"
+                className="w-full sm:w-56 rounded-3xl object-cover h-[300px] md:h-[230px]"
               />
               <div className="flex flex-col left-[13rem] sm:mt-20">
                 <h1 className="text-2xl font-bold">Embrace</h1>
