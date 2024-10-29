@@ -14,6 +14,7 @@ const PreorderForm = () => {
     state: "",
     address: "",
     delivery_type: "",
+    quantity: 1,
   });
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -22,7 +23,7 @@ const PreorderForm = () => {
     countries: [],
     states: [],
     phoneCode: "",
-    priceData: { currency: "", price: "" },
+    priceData: { currency: "", price: "", main_price: "" },
     deliveryFees: [],
     loading: false,
     error: "",
@@ -249,7 +250,7 @@ const PreorderForm = () => {
 
   useEffect(() => {
     const startDate = new Date("2024-10-28T00:00:00");
-    const endDate = new Date(startDate.getTime() + 21 * 24 * 60 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + 23 * 24 * 60 * 60 * 1000);
 
     const timer = setInterval(() => {
       const now = new Date();
@@ -300,7 +301,7 @@ const PreorderForm = () => {
     if (formData.country && formData.state) {
       fetchDeliveryFee(formData.country, formData.state);
     }
-  }, [formData.state]);
+  }, [formData.state, formData.quantity]);
 
   useEffect(() => {
     if (metadata.deliveryFees.length === 1) {
@@ -322,7 +323,7 @@ const PreorderForm = () => {
   // Fetch price and set the correct country name
   const fetchPrice = async (countryCode) => {
     try {
-      const countryName = countryMap[countryCode] || "United States"; // Default to "United States" if country not found
+      const countryName = countryMap[countryCode] || "United States";
       const effectiveCountry = getEffectiveCountry(countryCode);
       const response = await fetch(
         `https://lovepassionsandwholeness.com/api/price/${effectiveCountry}`
@@ -333,8 +334,10 @@ const PreorderForm = () => {
         setMetadata((prev) => ({
           ...prev,
           priceData: {
-            ...data.data,
-            country: countryName, // Set the full country name here
+            currency: data.data.currency,
+            price: data.data.price,
+            main_price: data.data.main_price,
+            country: countryName,
           },
         }));
       }
@@ -343,6 +346,11 @@ const PreorderForm = () => {
     }
   };
 
+  const calculateDeliveryDivisor = (quantity) => {
+    return Math.ceil(quantity / 2);
+  };
+
+  // Update fetchDeliveryFee to include the adjusted fee calculation
   const fetchDeliveryFee = async (countryCode, state = "") => {
     try {
       const effectiveCountry = getEffectiveCountry(countryCode);
@@ -358,7 +366,8 @@ const PreorderForm = () => {
           ...prev,
           deliveryFees: data.data.map((fee) => ({
             ...fee,
-            fee: parseFloat(fee.fee).toFixed(2),
+            originalFee: parseFloat(fee.fee), // Store original fee
+            fee: (parseFloat(fee.fee) * calculateDeliveryDivisor(formData.quantity)).toFixed(2),
           })),
         }));
       }
@@ -370,13 +379,18 @@ const PreorderForm = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+   // Update handleSubmit to include the adjusted delivery fee
+   const handleSubmit = async (e) => {
     e.preventDefault();
     setMetadata((prev) => ({ ...prev, loading: true, error: "" }));
 
     try {
       const selectedCountry = metadata.countries.find(
         (c) => c.code2 === formData.country
+      );
+
+      const selectedDeliveryFee = metadata.deliveryFees.find(
+        (fee) => fee.id === formData.delivery_type
       );
 
       const payload = {
@@ -387,6 +401,9 @@ const PreorderForm = () => {
         state: formData.state,
         address: formData.address,
         delivery_type: formData.delivery_type,
+        quantity: formData.quantity,
+        adjusted_delivery_fee: selectedDeliveryFee?.fee || 0, 
+        delivery_divisor: calculateDeliveryDivisor(formData.quantity), 
       };
 
       const response = await fetch(
@@ -404,7 +421,6 @@ const PreorderForm = () => {
       const data = await response.json();
 
       if (data.status === "success") {
-        // Check if selected country is in the explicitly included countries
         if (
           selectedCountry &&
           Object.values(countryMap).includes(selectedCountry.name)
@@ -429,6 +445,8 @@ const PreorderForm = () => {
   const renderDeliveryInfo = () => {
     if (metadata.deliveryFees.length === 0) return null;
 
+    const deliveryDivisor = calculateDeliveryDivisor(formData.quantity);
+
     if (metadata.deliveryFees.length === 1) {
       const fee = metadata.deliveryFees[0];
       return (
@@ -436,6 +454,7 @@ const PreorderForm = () => {
           <p className="text-lg font-semibold">
             Delivery: {fee.type} {fee.currency} {fee.fee}
           </p>
+          
         </div>
       );
     }
@@ -454,15 +473,66 @@ const PreorderForm = () => {
             }))
           }
           required
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none "
+          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none"
         >
           <option value="">Select delivery option</option>
           {metadata.deliveryFees.map((fee) => (
             <option key={fee.id} value={fee.id}>
-              {fee.type}: {fee.currency} {fee.fee}
+              {fee.type}: {fee.currency} {fee.fee} 
+              
             </option>
           ))}
         </select>
+      </div>
+    );
+  };
+
+  const renderQuantityField = () => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Quantity
+      </label>
+      <input
+        type="number"
+        min="1"
+        value={formData.quantity}
+        onChange={(e) =>
+          setFormData((prev) => ({
+            ...prev,
+            quantity: Math.max(1, parseInt(e.target.value) || 1),
+          }))
+        }
+        required
+        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none"
+      />
+    </div>
+  );
+
+  // Update the price display section
+  const renderPriceSection = () => {
+    if (!metadata.priceData.price) return null;
+
+    const calculateTotal = (price) => {
+      const numericPrice = parseFloat(price);
+      return (numericPrice * formData.quantity).toFixed(2);
+    };
+
+    return (
+      <div className="p-4 bg-gray-300 border border-gray-500 rounded-xl">
+        <div className="text-lg pt-2 flex flex-col gap-4 font-semibold">
+          <div className="flex flex-col">
+            <p className="text-2xl font-semibold">Price After Pre Order</p>
+            <span className="line-through mr-2">
+              {metadata.priceData.currency}{" "}
+              {calculateTotal(metadata.priceData.main_price)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <p className="text-2xl font-semibold">Pre Order Book Price</p>
+            {metadata.priceData.currency}{" "}
+            {calculateTotal(metadata.priceData.price)}
+          </div>
+        </div>
       </div>
     );
   };
@@ -498,7 +568,11 @@ const PreorderForm = () => {
           </div>
         </div>
       </div>
-      <img src={ban} className="md:hidden w-full object-cover h-[360px]" alt="" />
+      <img
+        src={ban}
+        className="md:hidden w-full object-cover h-[360px]"
+        alt=""
+      />
       <img
         src={ban}
         className="hidden md:block h-[250px] object-cover w-full -z-20"
@@ -686,26 +760,9 @@ const PreorderForm = () => {
                 />
               </div>
 
-              {metadata.priceData.price && (
-                <div className="p-4 bg-gray-50 rounded-lg"> 
-                  <div className="text-lg pt-2 flex flex-col gap-4 font-semibold">
-                    <div class="flex flex-col">
-                      <p className="text-2xl font-semibold">
-                       Price After Pre Order
-                      </p>
-                      <span className="line-through mr-2">
-                        {getPreorderPrice(metadata.priceData.country)}
-                      </span>
-                    </div>
-                    <div class="flex flex-col">
-                      <p className="text-2xl font-semibold">
-                        Pre Order Book Price
-                      </p>
-                    {metadata.priceData.currency} {metadata.priceData.price}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {renderQuantityField()}
+
+              {renderPriceSection()}
 
               {renderDeliveryInfo()}
 
@@ -714,6 +771,15 @@ const PreorderForm = () => {
                   <p className="text-red-700">{metadata.error}</p>
                 </div>
               )}
+
+              <div className="p-2 bg-gray-300 rounded-xl border border-gray-500 gap-1">
+                <span className="font-bold">Please note:</span>
+                <p>
+                  Contact information should be correct and properly spelled. We
+                  would not be liable for errors caused by wrong information.
+                  Also note that payment made is non-refundable.
+                </p>
+              </div>
 
               <button
                 type="submit"
