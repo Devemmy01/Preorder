@@ -494,14 +494,20 @@ const PreorderForm = () => {
       </label>
       <input
         type="number"
-        min="1"
-        value={formData.quantity}
-        onChange={(e) =>
-          setFormData((prev) => ({
-            ...prev,
-            quantity: Math.max(1, parseInt(e.target.value) || 1),
-          }))
-        }
+        inputMode="numeric"
+        pattern="[0-9]*"
+        placeholder="Enter quantity"
+        value={formData.quantity || ''}
+        onChange={(e) => {
+          const value = e.target.value;
+          // Allow empty string or positive numbers
+          if (value === '' || parseInt(value) > 0) {
+            setFormData(prev => ({
+              ...prev,
+              quantity: value === '' ? '' : parseInt(value)
+            }));
+          }
+        }}
         required
         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none"
       />
