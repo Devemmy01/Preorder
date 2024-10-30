@@ -775,8 +775,9 @@ const PreorderForm = () => {
                 </div>
               )}
 
-              <div className="p-2 bg-gray-300 rounded-xl border border-gray-500 gap-1">
-                <span className="font-bold">Please note:</span>
+              <div className="p-2 bg-gray-300 rounded-xl border border-gray-500 py-2">
+                <p className="pb-5">If you experience any difficulty in proceeding to payments , please send a whatsapp message to <a href="http://wa.me/+2349115226129" target="_blank" className="text-blue-700 font-bold">+2349115226129</a> or an Instagram DM <a href="https://www.instagram.com/love.passions.wholeness/" target="_blank" className="text-blue-700 font-bold">@Love.passions.wholeness</a>.</p>
+                <span className="font-bold">Also note:</span>
                 <p>
                   Contact information should be correct and properly spelled. We
                   would not be liable for errors caused by wrong information.
