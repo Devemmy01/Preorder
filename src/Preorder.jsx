@@ -367,7 +367,9 @@ const PreorderForm = () => {
           deliveryFees: data.data.map((fee) => ({
             ...fee,
             originalFee: parseFloat(fee.fee), // Store original fee
-            fee: (parseFloat(fee.fee) * calculateDeliveryDivisor(formData.quantity)).toFixed(2),
+            fee: (
+              parseFloat(fee.fee) * calculateDeliveryDivisor(formData.quantity)
+            ).toFixed(2),
           })),
         }));
       }
@@ -379,8 +381,8 @@ const PreorderForm = () => {
     }
   };
 
-   // Update handleSubmit to include the adjusted delivery fee
-   const handleSubmit = async (e) => {
+  // Update handleSubmit to include the adjusted delivery fee
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMetadata((prev) => ({ ...prev, loading: true, error: "" }));
 
@@ -402,8 +404,8 @@ const PreorderForm = () => {
         address: formData.address,
         delivery_type: formData.delivery_type,
         quantity: formData.quantity,
-        adjusted_delivery_fee: selectedDeliveryFee?.fee || 0, 
-        delivery_divisor: calculateDeliveryDivisor(formData.quantity), 
+        adjusted_delivery_fee: selectedDeliveryFee?.fee || 0,
+        delivery_divisor: calculateDeliveryDivisor(formData.quantity),
       };
 
       const response = await fetch(
@@ -425,10 +427,7 @@ const PreorderForm = () => {
           selectedCountry &&
           Object.values(countryMap).includes(selectedCountry.name)
         ) {
-          toast.success("Form submitted successfully!");
-          setTimeout(() => {
-            window.open(data.data, "_blank");
-          }, 3000);
+          window.open(data.data, "_blank");
         } else {
           setShowSuccessModal(true);
         }
@@ -454,7 +453,6 @@ const PreorderForm = () => {
           <p className="text-lg font-semibold">
             Delivery: {fee.type} {fee.currency} {fee.fee}
           </p>
-          
         </div>
       );
     }
@@ -478,8 +476,7 @@ const PreorderForm = () => {
           <option value="">Select delivery option</option>
           {metadata.deliveryFees.map((fee) => (
             <option key={fee.id} value={fee.id}>
-              {fee.type}: {fee.currency} {fee.fee} 
-              
+              {fee.type}: {fee.currency} {fee.fee}
             </option>
           ))}
         </select>
@@ -497,14 +494,14 @@ const PreorderForm = () => {
         inputMode="numeric"
         pattern="[0-9]*"
         placeholder="Enter quantity"
-        value={formData.quantity || ''}
+        value={formData.quantity || ""}
         onChange={(e) => {
           const value = e.target.value;
           // Allow empty string or positive numbers
-          if (value === '' || parseInt(value) > 0) {
-            setFormData(prev => ({
+          if (value === "" || parseInt(value) > 0) {
+            setFormData((prev) => ({
               ...prev,
-              quantity: value === '' ? '' : parseInt(value)
+              quantity: value === "" ? "" : parseInt(value),
             }));
           }
         }}
