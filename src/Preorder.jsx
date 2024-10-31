@@ -551,7 +551,7 @@ const PreorderForm = () => {
     return (
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          State
+          State / Region / City
         </label>
         <SearchableDropdown
           options={metadata.states}
@@ -858,13 +858,13 @@ const PreorderForm = () => {
               <div className="p-2 bg-gray-300 rounded-xl border border-gray-500 py-2">
                 <p className="pb-5">
                   If you experience any difficulty in proceeding to payments,
-                  please send a whatsapp message to{" "}
+                  please send us a DM on whatsapp by clicking{" "}
                   <a
                     href="http://wa.me/+2349115226129"
                     target="_blank"
                     className="text-blue-700 font-bold"
                   >
-                    +2349115226129
+                    here
                   </a>{" "}
                   or an Instagram DM{" "}
                   <a
