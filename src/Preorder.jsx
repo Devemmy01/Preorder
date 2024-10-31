@@ -1,9 +1,95 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import countriesData from "./countries.json";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Search, ChevronDown, ChevronUp } from "lucide-react";
 import ban from "./assets/ban.jpg";
+
+const SearchableDropdown = ({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder, 
+  displayKey = "name",
+  valueKey = "code2",
+  onSelect  // Add onSelect prop for custom selection handling
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter(option =>
+    option[displayKey].toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedOption = options.find(option => 
+    option[valueKey] === value || option[displayKey] === value
+  );
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div
+        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none bg-white flex justify-between items-center cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={`${!selectedOption ? 'text-gray-500' : 'text-black'}`}>
+          {selectedOption ? selectedOption[displayKey] : placeholder}
+        </span>
+        {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+          <div className="p-2 border-b border-gray-200 flex items-center gap-2">
+            <Search size={20} className="text-gray-400" />
+            <input
+              type="text"
+              className="w-full p-1 focus:outline-none"
+              placeholder={`Search ${placeholder.toLowerCase()}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="p-3 text-gray-500 text-center">No results found</div>
+            ) : (
+              filteredOptions.map((option) => (
+                <div
+                  key={option[valueKey]}
+                  className={`p-3 hover:bg-gray-100 cursor-pointer ${
+                    (value === option[valueKey] || value === option[displayKey]) ? 'bg-gray-50' : ''
+                  }`}
+                  onClick={() => {
+                    if (onSelect) {
+                      onSelect(option);
+                    } else {
+                      onChange(option[valueKey]);
+                    }
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                >
+                  {option[displayKey]}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const PreorderForm = () => {
   const [formData, setFormData] = useState({
@@ -350,7 +436,6 @@ const PreorderForm = () => {
     return Math.ceil(quantity / 2);
   };
 
-  // Update fetchDeliveryFee to include the adjusted fee calculation
   const fetchDeliveryFee = async (countryCode, state = "") => {
     try {
       const effectiveCountry = getEffectiveCountry(countryCode);
@@ -381,7 +466,6 @@ const PreorderForm = () => {
     }
   };
 
-  // Update handleSubmit to include the adjusted delivery fee
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMetadata((prev) => ({ ...prev, loading: true, error: "" }));
@@ -421,13 +505,12 @@ const PreorderForm = () => {
       );
 
       const data = await response.json();
-
       if (data.status === "success") {
         if (
           selectedCountry &&
           Object.values(countryMap).includes(selectedCountry.name)
         ) {
-          window.open(data.data, "_blank");
+          window.location.href = data.data;
         } else {
           setShowSuccessModal(true);
         }
@@ -439,6 +522,52 @@ const PreorderForm = () => {
     } finally {
       setMetadata((prev) => ({ ...prev, loading: false }));
     }
+  };
+
+  const renderCountrySelect = () => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Country
+      </label>
+      <SearchableDropdown
+        options={metadata.countries}
+        value={formData.country}
+        onChange={(value) => {
+          setFormData((prev) => ({
+            ...prev,
+            country: value,
+            state: "",
+            delivery_type: "",
+          }));
+        }}
+        placeholder="Select country"
+      />
+    </div>
+  );
+
+  const renderStateSelect = () => {
+    if (metadata.states.length === 0) return null;
+    
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          State
+        </label>
+        <SearchableDropdown
+          options={metadata.states}
+          value={formData.state}
+          onSelect={(selectedState) => {
+            setFormData((prev) => ({
+              ...prev,
+              state: selectedState.name,
+            }));
+          }}
+          placeholder="Select state"
+          valueKey="name"
+          displayKey="name"
+        />
+      </div>
+    );
   };
 
   const renderDeliveryInfo = () => {
@@ -670,57 +799,8 @@ const PreorderForm = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Country
-                </label>
-                <select
-                  value={formData.country}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      country: e.target.value,
-                      state: "",
-                      delivery_type: "",
-                    }))
-                  }
-                  required
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none "
-                >
-                  <option value="">Select country</option>
-                  {metadata.countries.map((country) => (
-                    <option key={country.code2} value={country.code2}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {metadata.states.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    State
-                  </label>
-                  <select
-                    value={formData.state}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        state: e.target.value,
-                      }))
-                    }
-                    required
-                    className="w-full p-3 border border-gray-300 rounded-md focus:outline-none "
-                  >
-                    <option value="">Select state</option>
-                    {metadata.states.map((state) => (
-                      <option key={state.code} value={state.name}>
-                        {state.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {renderCountrySelect()}
+              {renderStateSelect()}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -776,7 +856,26 @@ const PreorderForm = () => {
               )}
 
               <div className="p-2 bg-gray-300 rounded-xl border border-gray-500 py-2">
-                <p className="pb-5">If you experience any difficulty in proceeding to payments , please send a whatsapp message to <a href="http://wa.me/+2349115226129" target="_blank" className="text-blue-700 font-bold">+2349115226129</a> or an Instagram DM <a href="https://www.instagram.com/love.passions.wholeness/" target="_blank" className="text-blue-700 font-bold">@Love.passions.wholeness</a>.</p>
+                <p className="pb-5">
+                  If you experience any difficulty in proceeding to payments,
+                  please send a whatsapp message to{" "}
+                  <a
+                    href="http://wa.me/+2349115226129"
+                    target="_blank"
+                    className="text-blue-700 font-bold"
+                  >
+                    +2349115226129
+                  </a>{" "}
+                  or an Instagram DM{" "}
+                  <a
+                    href="https://www.instagram.com/love.passions.wholeness/"
+                    target="_blank"
+                    className="text-blue-700 font-bold"
+                  >
+                    @Love.passions.wholeness
+                  </a>
+                  .
+                </p>
                 <span className="font-bold">Also note:</span>
                 <p>
                   Contact information should be correct and properly spelled. We
@@ -826,19 +925,6 @@ const PreorderForm = () => {
                 </div>
               </div>
             )}
-
-            <ToastContainer
-              position="top-center"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="dark"
-            />
           </div>
         </div>
       </div>
