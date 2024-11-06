@@ -1,7 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, ArrowLeft, Copy } from 'lucide-react';
 
-const SuccessPayment = ({ transactionId, reference }) => {
+const SuccessPayment = () => {
+  const [status, setStatus] = useState('loading');
+  const [orderData, setOrderData] = useState(null);
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const sessionId = queryParams.get('session_id');
+    const transactionId = queryParams.get('transaction_id');
+
+    if (sessionId) {
+      // Handle Stripe success
+      fetch(`https://lovepassionsandwholeness.com/api/verify-payment?session_id=${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+          setStatus('success');
+          setOrderData(data);
+        })
+        .catch(() => setStatus('error'));
+    } else if (transactionId) {
+      // Handle Flutterwave success (existing logic)
+      setStatus('success');
+      setOrderData({ transaction_id: transactionId });
+    }
+  }, []);
+
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
     alert('Copied to clipboard!');
@@ -22,13 +46,13 @@ const SuccessPayment = ({ transactionId, reference }) => {
 
         <div className="space-y-4 mb-8">
           <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-            {transactionId && (
+            {orderData && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 text-sm">Transaction ID</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-900 font-medium">{transactionId}</span>
+                  <span className="text-gray-900 font-medium">{orderData.transaction_id}</span>
                   <button 
-                    onClick={() => handleCopy(transactionId)}
+                    onClick={() => handleCopy(orderData.transaction_id)}
                     className="text-gray-500 hover:text-gray-700"
                   >
                     <Copy className="h-4 w-4" />
@@ -36,13 +60,13 @@ const SuccessPayment = ({ transactionId, reference }) => {
                 </div>
               </div>
             )}
-            {reference && (
+            {orderData && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 text-sm">Reference</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-900 font-medium">{reference}</span>
+                  <span className="text-gray-900 font-medium">{orderData.reference}</span>
                   <button 
-                    onClick={() => handleCopy(reference)}
+                    onClick={() => handleCopy(orderData.reference)}
                     className="text-gray-500 hover:text-gray-700"
                   >
                     <Copy className="h-4 w-4" />

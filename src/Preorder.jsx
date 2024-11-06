@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import countriesData from "./countries.json";
 import { CheckCircle, Search, ChevronDown, ChevronUp } from "lucide-react";
 import ban from "./assets/ban.jpg";
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 const SearchableDropdown = ({ 
   options, 
@@ -88,6 +90,51 @@ const SearchableDropdown = ({
         </div>
       )}
     </div>
+  );
+};
+
+const stripePromise = loadStripe('pk_test_51OvLQXHxXnJqQZVPGOyNm8UbkZGRWW0EZBXSrWOABGpQGYrIwN9tNQz8N5GgRHpqmx7JgwflQepDGLWgAVLUNpDX00uv5OQWRK');
+
+const StripePaymentForm = ({ clientSecret, orderId }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
+    if (!stripe || !elements) {
+      return;
+    }
+
+    // Extract payment intent ID from client secret
+    const paymentIntentId = clientSecret.split('_secret_')[0];
+    
+    // Redirect URL
+    const returnUrl = `https://lovepassionsandwholeness.com/api/preorder-stripe?paymentintent=${paymentIntentId}/${orderId}`;
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: returnUrl,
+      },
+    });
+
+    if (error) {
+      console.error('Payment error:', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <PaymentElement />
+      <button 
+        type="submit" 
+        disabled={!stripe} 
+        className="w-full p-3 text-white font-medium rounded-md bg-black hover:bg-gray-800 mt-4"
+      >
+        Pay now
+      </button>
+    </form>
   );
 };
 
@@ -505,19 +552,31 @@ const PreorderForm = () => {
       );
 
       const data = await response.json();
+      console.log('API Response:', data);
+      
       if (data.status === "success") {
-        if (
-          selectedCountry &&
-          Object.values(countryMap).includes(selectedCountry.name)
-        ) {
+        // Check if the country is Nigeria or Ghana for Flutterwave
+        if (selectedCountry && 
+            (selectedCountry.code2 === 'NG' || selectedCountry.code2 === 'GH')) {
+          // For Nigeria and Ghana, redirect to Flutterwave
           window.location.href = data.data;
         } else {
-          setShowSuccessModal(true);
+          // For all other countries, redirect to Stripe
+          if (data.data && data.data.client_secret && data.data.order_id) {
+            const paymentIntentId = data.data.id;
+            window.location.href = `https://lovepassionsandwholeness.com/api/preorder-stripe/${data.data.order_id}?paymentintent=${paymentIntentId}`;
+          } else {
+            setMetadata((prev) => ({ 
+              ...prev, 
+              error: "Payment initialization failed" 
+            }));
+          }
         }
       } else {
         setMetadata((prev) => ({ ...prev, error: data.message }));
       }
     } catch (error) {
+      console.error('Submission error:', error);
       setMetadata((prev) => ({ ...prev, error: "Failed to submit order" }));
     } finally {
       setMetadata((prev) => ({ ...prev, loading: false }));
@@ -668,6 +727,8 @@ const PreorderForm = () => {
       </div>
     );
   };
+
+  const [stripeData, setStripeData] = useState(null);
 
   return (
     <>
@@ -928,6 +989,31 @@ const PreorderForm = () => {
           </div>
         </div>
       </div>
+
+      {stripeData && stripeData.clientSecret ? (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4">Complete Payment</h2>
+            <Elements 
+              stripe={stripePromise} 
+              options={{
+                clientSecret: stripeData.clientSecret,
+                appearance: {
+                  theme: 'stripe',
+                  variables: {
+                    colorPrimary: '#000000',
+                  },
+                },
+              }}
+            >
+              <StripePaymentForm 
+                clientSecret={stripeData.clientSecret}
+                orderId={stripeData.orderId}
+              />
+            </Elements>
+          </div>
+        </div>
+      ) : null}
 
       <style jsx>{`
         .modal-overlay {
