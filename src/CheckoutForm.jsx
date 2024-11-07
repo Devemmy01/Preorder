@@ -69,6 +69,7 @@ const CheckoutForm = ({ orderId, clientSecret }) => {
       >
         {isProcessing ? 'Processing...' : 'Pay now'}
       </button>
+      <p className="text-center text-sm text-gray-500 mt-4">Kindly fill the payment form before clicking the button.</p>
     </form>
   );
 };
