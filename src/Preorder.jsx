@@ -4,6 +4,7 @@ import { CheckCircle, Search, ChevronDown, ChevronUp } from "lucide-react";
 import ban from "./assets/ban.jpg";
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import CheckoutForm from './CheckoutForm';
 
 const SearchableDropdown = ({ 
   options, 
@@ -94,49 +95,6 @@ const SearchableDropdown = ({
 };
 
 const stripePromise = loadStripe('pk_test_51OvLQXHxXnJqQZVPGOyNm8UbkZGRWW0EZBXSrWOABGpQGYrIwN9tNQz8N5GgRHpqmx7JgwflQepDGLWgAVLUNpDX00uv5OQWRK');
-
-const StripePaymentForm = ({ clientSecret, orderId }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    
-    if (!stripe || !elements) {
-      return;
-    }
-
-    // Extract payment intent ID from client secret
-    const paymentIntentId = clientSecret.split('_secret_')[0];
-    
-    // Redirect URL
-    const returnUrl = `https://lovepassionsandwholeness.com/api/preorder-stripe?paymentintent=${paymentIntentId}/${orderId}`;
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: returnUrl,
-      },
-    });
-
-    if (error) {
-      console.error('Payment error:', error);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <PaymentElement />
-      <button 
-        type="submit" 
-        disabled={!stripe} 
-        className="w-full p-3 text-white font-medium rounded-md bg-black hover:bg-gray-800 mt-4"
-      >
-        Pay now
-      </button>
-    </form>
-  );
-};
 
 const PreorderForm = () => {
   const [formData, setFormData] = useState({
@@ -513,6 +471,8 @@ const PreorderForm = () => {
     }
   };
 
+  const [paymentIntent, setPaymentIntent] = useState(null);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMetadata((prev) => ({ ...prev, loading: true, error: "" }));
@@ -521,6 +481,7 @@ const PreorderForm = () => {
       const selectedCountry = metadata.countries.find(
         (c) => c.code2 === formData.country
       );
+      console.log('Selected Country:', selectedCountry);
 
       const selectedDeliveryFee = metadata.deliveryFees.find(
         (fee) => fee.id === formData.delivery_type
@@ -553,31 +514,54 @@ const PreorderForm = () => {
 
       const data = await response.json();
       console.log('API Response:', data);
-      
+      console.log('Payment Intent Data:', data.data);
+
       if (data.status === "success") {
-        // Check if the country is Nigeria or Ghana for Flutterwave
         if (selectedCountry && 
             (selectedCountry.code2 === 'NG' || selectedCountry.code2 === 'GH')) {
-          // For Nigeria and Ghana, redirect to Flutterwave
-          window.location.href = data.data;
-        } else {
-          // For all other countries, redirect to Stripe
-          if (data.data && data.data.client_secret && data.data.order_id) {
-            const paymentIntentId = data.data.id;
-            window.location.href = `https://lovepassionsandwholeness.com/api/preorder-stripe/${data.data.order_id}?paymentintent=${paymentIntentId}`;
+          console.log('Redirecting to Flutterwave...');
+          if (data.data && typeof data.data === 'string') {
+            window.location.href = data.data;
           } else {
             setMetadata((prev) => ({ 
               ...prev, 
-              error: "Payment initialization failed" 
+              error: "Invalid payment URL received" 
+            }));
+          }
+        } else {
+          console.log('Setting up Stripe payment...');
+          if (data.data && data.data.client_secret) {
+            console.log('Client Secret:', data.data.client_secret);
+            console.log('Order ID:', data.data.order_id);
+            
+            const paymentIntentData = {
+              clientSecret: data.data.client_secret,
+              orderId: data.data.order_id
+            };
+            console.log('Setting Payment Intent:', paymentIntentData);
+            
+            setPaymentIntent(paymentIntentData);
+            console.log('Payment Intent State Set');
+          } else {
+            console.log('Invalid payment data:', data.data);
+            setMetadata((prev) => ({ 
+              ...prev, 
+              error: "Invalid payment data received" 
             }));
           }
         }
       } else {
-        setMetadata((prev) => ({ ...prev, error: data.message }));
+        setMetadata((prev) => ({ 
+          ...prev, 
+          error: data.message || "Failed to process order" 
+        }));
       }
     } catch (error) {
       console.error('Submission error:', error);
-      setMetadata((prev) => ({ ...prev, error: "Failed to submit order" }));
+      setMetadata((prev) => ({ 
+        ...prev, 
+        error: "Failed to submit order. Please try again." 
+      }));
     } finally {
       setMetadata((prev) => ({ ...prev, loading: false }));
     }
@@ -728,7 +712,40 @@ const PreorderForm = () => {
     );
   };
 
-  const [stripeData, setStripeData] = useState(null);
+  if (paymentIntent) {
+    console.log('Rendering Stripe Elements with:', paymentIntent);
+    
+    const options = {
+      clientSecret: paymentIntent.clientSecret,
+      appearance: {
+        theme: 'stripe',
+        variables: {
+          colorPrimary: '#000000',
+        },
+      },
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+            <p className="text-yellow-800">
+              ⚠️ If you're seeing a blank payment form or getting errors, please:
+              <ul className="list-disc ml-6 mt-2">
+                <li>Temporarily disable your ad blocker for this site</li>
+                <li>Refresh the page and try again</li>
+                <li>Or use a different browser</li>
+              </ul>
+            </p>
+          </div>
+          
+          <Elements stripe={stripePromise} options={options}>
+            <CheckoutForm orderId={paymentIntent.orderId} />
+          </Elements>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -911,8 +928,8 @@ const PreorderForm = () => {
               {renderDeliveryInfo()}
 
               {metadata.error && (
-                <div className="p-4 bg-red-50 border border-red-400 rounded-lg">
-                  <p className="text-red-700">{metadata.error}</p>
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md mt-4">
+                  <p className="text-red-600 text-sm">{metadata.error}</p>
                 </div>
               )}
 
@@ -990,31 +1007,6 @@ const PreorderForm = () => {
         </div>
       </div>
 
-      {stripeData && stripeData.clientSecret ? (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Complete Payment</h2>
-            <Elements 
-              stripe={stripePromise} 
-              options={{
-                clientSecret: stripeData.clientSecret,
-                appearance: {
-                  theme: 'stripe',
-                  variables: {
-                    colorPrimary: '#000000',
-                  },
-                },
-              }}
-            >
-              <StripePaymentForm 
-                clientSecret={stripeData.clientSecret}
-                orderId={stripeData.orderId}
-              />
-            </Elements>
-          </div>
-        </div>
-      ) : null}
-
       <style jsx>{`
         .modal-overlay {
           position: fixed;
@@ -1074,6 +1066,15 @@ const PreorderForm = () => {
           animation: popupAnimation 0.3s ease-out;
         }
       `}</style>
+
+      {metadata.loading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <div className="animate-spin h-8 w-8 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-center">Processing your order...</p>
+          </div>
+        </div>
+      )}
     </>
   );
 };
