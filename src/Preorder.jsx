@@ -94,7 +94,7 @@ const SearchableDropdown = ({
   );
 };
 
-const stripePromise = loadStripe('pk_test_51OvLQXHxXnJqQZVPGOyNm8UbkZGRWW0EZBXSrWOABGpQGYrIwN9tNQz8N5GgRHpqmx7JgwflQepDGLWgAVLUNpDX00uv5OQWRK');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const PreorderForm = () => {
   const [formData, setFormData] = useState({
@@ -471,7 +471,7 @@ const PreorderForm = () => {
     }
   };
 
-  const [paymentIntent, setPaymentIntent] = useState(null);
+  const [clientSecret, setClientSecret] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -514,7 +514,6 @@ const PreorderForm = () => {
 
       const data = await response.json();
       console.log('API Response:', data);
-      console.log('Payment Intent Data:', data.data);
 
       if (data.status === "success") {
         if (selectedCountry && 
@@ -531,17 +530,7 @@ const PreorderForm = () => {
         } else {
           console.log('Setting up Stripe payment...');
           if (data.data && data.data.client_secret) {
-            console.log('Client Secret:', data.data.client_secret);
-            console.log('Order ID:', data.data.order_id);
-            
-            const paymentIntentData = {
-              clientSecret: data.data.client_secret,
-              orderId: data.data.order_id
-            };
-            console.log('Setting Payment Intent:', paymentIntentData);
-            
-            setPaymentIntent(paymentIntentData);
-            console.log('Payment Intent State Set');
+            setClientSecret(data.data.client_secret);
           } else {
             console.log('Invalid payment data:', data.data);
             setMetadata((prev) => ({ 
@@ -712,36 +701,31 @@ const PreorderForm = () => {
     );
   };
 
-  if (paymentIntent) {
-    console.log('Rendering Stripe Elements with:', paymentIntent);
-    
-    const options = {
-      clientSecret: paymentIntent.clientSecret,
-      appearance: {
-        theme: 'stripe',
-        variables: {
-          colorPrimary: '#000000',
-        },
+  if (clientSecret) {
+    const appearance = {
+      theme: 'stripe',
+      variables: {
+        colorPrimary: '#000000',
       },
+    };
+
+    const options = {
+      clientSecret,
+      appearance,
+      loader: 'auto',
     };
 
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-3xl mx-auto px-4">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
-            <p className="text-yellow-800">
-              ⚠️ If you're seeing a blank payment form or getting errors, please:
-              <ul className="list-disc ml-6 mt-2">
-                <li>Temporarily disable your ad blocker for this site</li>
-                <li>Refresh the page and try again</li>
-                <li>Or use a different browser</li>
-              </ul>
-            </p>
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <Elements stripe={stripePromise} options={options}>
+              <CheckoutForm 
+                orderId={clientSecret.split('_secret_')[0]} 
+                clientSecret={clientSecret}
+              />
+            </Elements>
           </div>
-          
-          <Elements stripe={stripePromise} options={options}>
-            <CheckoutForm orderId={paymentIntent.orderId} />
-          </Elements>
         </div>
       </div>
     );
