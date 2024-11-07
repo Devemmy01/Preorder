@@ -19,8 +19,6 @@ const PaymentStatus = () => {
       'payment_intent_client_secret'
     );
 
-    const orderId = new URLSearchParams(window.location.search).get('order_id');
-
     if (!clientSecret) {
       setStatus({
         message: 'No payment information found.',
@@ -36,37 +34,11 @@ const PaymentStatus = () => {
         
         switch (paymentIntent.status) {
           case 'succeeded':
-            // Notify backend about successful payment
-            try {
-              const response = await fetch(
-                `https://lovepassionsandwholeness.com/api/preorder-stripe/${orderId}`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    paymentIntentId: paymentIntent.id,
-                    status: 'succeeded'
-                  })
-                }
-              );
-              
-              if (!response.ok) throw new Error('Failed to update order status');
-              
-              setStatus({
-                message: 'Payment successful! Thank you for your order.',
-                type: 'success',
-                isLoading: false
-              });
-            } catch (error) {
-              console.error('Error updating order:', error);
-              setStatus({
-                message: 'Payment received but order status update failed. Our team will contact you.',
-                type: 'warning',
-                isLoading: false
-              });
-            }
+            setStatus({
+              message: 'Payment successful! Thank you for your order.',
+              type: 'success',
+              isLoading: false
+            });
             break;
 
           case 'processing':
