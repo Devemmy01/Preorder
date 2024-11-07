@@ -9,9 +9,17 @@ const CheckoutForm = ({ orderId, clientSecret }) => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!stripe || !elements) {
+    if (!stripe) {
+      console.log('Stripe not yet loaded');
       return;
     }
+
+    if (!elements) {
+      console.log('Elements not yet loaded');
+      return;
+    }
+
+    console.log('Stripe and Elements loaded successfully');
     setIsReady(true);
   }, [stripe, elements]);
 
@@ -56,6 +64,16 @@ const CheckoutForm = ({ orderId, clientSecret }) => {
       <div className="text-center p-4">
         <div className="animate-spin h-8 w-8 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
         <p>Loading payment form...</p>
+      </div>
+    );
+  }
+
+  if (!stripe || !elements) {
+    return (
+      <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-md">
+        <p className="text-yellow-700">
+          Payment system is initializing. Please wait...
+        </p>
       </div>
     );
   }

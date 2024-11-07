@@ -94,7 +94,10 @@ const SearchableDropdown = ({
   );
 };
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = loadStripe(STRIPE_KEY);
+
+const DEBUG = import.meta.env.DEV;
 
 const PreorderForm = () => {
   const [formData, setFormData] = useState({
@@ -702,22 +705,36 @@ const PreorderForm = () => {
   };
 
   if (clientSecret) {
-    const appearance = {
-      theme: 'stripe',
-      variables: {
-        colorPrimary: '#000000',
-      },
-    };
+    if (DEBUG) {
+      console.log('Debug Info:', {
+        stripeKey: STRIPE_KEY ? 'Present' : 'Missing',
+        clientSecret: clientSecret ? 'Present' : 'Missing',
+        keyLength: STRIPE_KEY?.length,
+        environment: import.meta.env.MODE
+      });
+    }
 
     const options = {
       clientSecret,
-      appearance,
+      appearance: {
+        theme: 'stripe',
+        variables: {
+          colorPrimary: '#000000',
+        },
+      },
       loader: 'auto',
     };
+
+    console.log('Initializing Stripe with key:', STRIPE_KEY.slice(0, 10) + '...');
 
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-3xl mx-auto px-4">
+          {DEBUG && (
+            <div className="mb-4 p-4 bg-blue-50 text-blue-700 rounded-md">
+              <p>Debug Mode: Stripe initialization in progress</p>
+            </div>
+          )}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <Elements stripe={stripePromise} options={options}>
               <CheckoutForm 
