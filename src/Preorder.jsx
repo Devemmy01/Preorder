@@ -730,11 +730,11 @@ const PreorderForm = () => {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-3xl mx-auto px-4">
-          {DEBUG && (
+          {/* {DEBUG && (
             <div className="mb-4 p-4 bg-blue-50 text-blue-700 rounded-md">
               <p>Debug Mode: Stripe initialization in progress</p>
             </div>
-          )}
+          )} */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <Elements stripe={stripePromise} options={options}>
               <CheckoutForm 
